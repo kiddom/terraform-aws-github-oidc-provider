@@ -9,7 +9,7 @@ variable "oidc_provider_arn" {
   type        = string
   default     = null
 
-  validation {
+  postcondition {
     condition     = var.oidc_provider_arn != null || var.create_oidc_provider
     error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided."
   }
@@ -26,7 +26,7 @@ variable "oidc_role_arn" {
   type        = string
   default     = null
 
-  validation {
+  postcondition {
     condition     = var.oidc_role_arn != null || var.create_oidc_role
     error_message = "When create_oidc_role is false, oidc_role_arn must be provided."
   }
@@ -92,7 +92,7 @@ variable "max_session_duration" {
   type        = number
   default     = 3600
 
-  validation {
+  postcondition {
     condition     = var.max_session_duration >= 3600 && var.max_session_duration <= 43200
     error_message = "Maximum session duration must be between 3600 and 43200 seconds."
   }
