@@ -21,11 +21,6 @@ locals {
     "When create_oidc_role is false, oidc_role_arn must be provided"
   )
 
-  # validate the github_thumbprint is provided if create_oidc_provider is true
-  validate_github_thumbprint = (var.create_oidc_provider && var.github_thumbprint != null) ? true : tobool(
-    "When create_oidc_provider is true, github_thumbprint must be provided"
-  )
-
   # ------------------------------------------------------------
   # Inputs
   # ------------------------------------------------------------
@@ -56,13 +51,6 @@ resource "aws_iam_openid_connect_provider" "this" {
   ]
   thumbprint_list = [var.github_thumbprint]
   url             = "https://token.actions.githubusercontent.com"
-
-  lifecycle {
-    precondition {
-      condition     = local.validate_github_thumbprint
-      error_message = "When create_oidc_provider is true, github_thumbprint must be provided"
-    }
-  }
 }
 
 resource "aws_iam_role" "this" {
@@ -136,16 +124,19 @@ data "aws_iam_policy_document" "this" {
       type        = "Federated"
     }
   }
+}
 
-  lifecycle {
-    precondition {
-      condition     = local.validate_oidc_provider
-      error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided"
-    }
+# Add validation checks at the root level
+check "provider_validation" {
+  assert {
+    condition     = local.validate_oidc_provider
+    error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided"
+  }
+}
 
-    precondition {
-      condition     = local.validate_oidc_role
-      error_message = "When create_oidc_role is false, oidc_role_arn must be provided"
-    }
+check "role_validation" {
+  assert {
+    condition     = local.validate_oidc_role
+    error_message = "When create_oidc_role is false, oidc_role_arn must be provided"
   }
 }
