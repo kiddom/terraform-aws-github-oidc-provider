@@ -12,14 +12,10 @@ locals {
   # ------------------------------------------------------------
 
   # Check that oidc_provider_arn is provided when create_oidc_provider is false
-  validate_oidc_provider = (var.create_oidc_provider || var.oidc_provider_arn != null) ? true : tobool(
-    "When create_oidc_provider is false, oidc_provider_arn must be provided"
-  )
+  validate_oidc_provider = var.create_oidc_provider || var.oidc_provider_arn != null
 
   # Check that oidc_role_arn is provided when create_oidc_role is false
-  validate_oidc_role = (var.create_oidc_role || var.oidc_role_arn != null) ? true : tobool(
-    "When create_oidc_role is false, oidc_role_arn must be provided"
-  )
+  validate_oidc_role = var.create_oidc_role || var.oidc_role_arn != null
 
   # ------------------------------------------------------------
   # Inputs
@@ -80,8 +76,7 @@ resource "aws_iam_role" "update_assume_role_policy" {
       permissions_boundary,
       tags,
       path,
-      force_detach_policies,
-      managed_policy_arns
+      force_detach_policies
     ]
   }
 }
