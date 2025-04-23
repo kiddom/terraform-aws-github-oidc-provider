@@ -132,9 +132,7 @@ check "provider_validation" {
     condition     = local.validate_oidc_provider
     error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided"
   }
-}
 
-check "role_validation" {
   assert {
     condition     = local.validate_oidc_role
     error_message = "When create_oidc_role is false, oidc_role_arn must be provided"
