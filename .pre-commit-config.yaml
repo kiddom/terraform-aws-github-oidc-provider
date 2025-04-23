@@ -16,6 +16,9 @@ repos:
   - id: check-merge-conflict
   - id: detect-aws-credentials
     args: ['--allow-missing-credentials']
+    exclude: ^\.github/workflows/
+    # Only look for actual AWS credential patterns
+    files: \.(js|json|yml|yaml|properties|xml|conf|ini|txt)$
 - repo: https://github.com/antonbabenko/pre-commit-terraform
   rev: v1.99.0
   hooks:

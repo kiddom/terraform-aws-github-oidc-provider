@@ -15,7 +15,7 @@ locals {
   validate_oidc_provider = (var.create_oidc_provider || var.oidc_provider_arn != null) ? true : tobool(
     "When create_oidc_provider is false, oidc_provider_arn must be provided"
   )
-  
+
   # Check that oidc_role_arn is provided when create_oidc_role is false
   validate_oidc_role = (var.create_oidc_role || var.oidc_role_arn != null) ? true : tobool(
     "When create_oidc_role is false, oidc_role_arn must be provided"
@@ -32,19 +32,19 @@ locals {
 
   # Determine the provider ARN to use - either created by this module or externally provided
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.this[0].arn : var.oidc_provider_arn
-  
+
   # Determine the role ARN to use - either created by this module or externally provided
   role_arn = var.create_oidc_role ? aws_iam_role.this[0].arn : var.oidc_role_arn
-  
+
   # Extract role name from ARN for policy attachments when using existing role
   existing_role_name = (var.create_oidc_role || var.oidc_role_arn == null) ? null : element(split("/", var.oidc_role_arn), length(split("/", var.oidc_role_arn)) - 1)
-  
+
   # For role name, use either the created role or the extracted name from ARN
   role_name = var.create_oidc_role ? aws_iam_role.this[0].name : local.existing_role_name
-  
+
   # Determine whether to attach policies (when creating a role or explicitly requested for existing role)
   attach_policies = var.create_oidc_role || var.attach_policies_to_existing_role
-  
+
   # Determine whether to update the assume role policy for an existing role
   update_role_policy = !var.create_oidc_role && var.update_existing_role_policy
 }
@@ -56,6 +56,13 @@ resource "aws_iam_openid_connect_provider" "this" {
   ]
   thumbprint_list = [var.github_thumbprint]
   url             = "https://token.actions.githubusercontent.com"
+
+  lifecycle {
+    precondition {
+      condition     = local.validate_github_thumbprint
+      error_message = "When create_oidc_provider is true, github_thumbprint must be provided"
+    }
+  }
 }
 
 resource "aws_iam_role" "this" {
@@ -67,12 +74,14 @@ resource "aws_iam_role" "this" {
   tags                 = var.tags
   path                 = var.iam_role_path
   permissions_boundary = var.iam_role_permissions_boundary
-  depends_on = [aws_iam_openid_connect_provider.this]
+  depends_on           = [aws_iam_openid_connect_provider.this]
 
   precondition {
-    condition = var.max_session_duration >= 3600 && 
+    condition = (
+      var.max_session_duration >= 3600 &&
       var.max_session_duration <= 43200 &&
       (var.oidc_role_arn != null || var.create_oidc_role)
+    )
     error_message = "Maximum session duration must be between 3600 and 43200 seconds."
   }
 }
@@ -80,10 +89,10 @@ resource "aws_iam_role" "this" {
 # Update assume role policy for existing roles
 resource "aws_iam_role" "update_assume_role_policy" {
   count = local.update_role_policy ? 1 : 0
-  
-  name                 = local.role_name
-  assume_role_policy   = data.aws_iam_policy_document.this.json
-  
+
+  name               = local.role_name
+  assume_role_policy = data.aws_iam_policy_document.this.json
+
   # Preserve existing role settings
   lifecycle {
     ignore_changes = [
@@ -114,7 +123,7 @@ data "aws_iam_policy_document" "this" {
     effect  = "Allow"
 
     condition {
-      test   = "StringLike"
+      test = "StringLike"
       values = [
         for repo in var.repositories :
         "repo:%{if length(regexall(":+", repo)) > 0}${repo}%{else}${repo}:*%{endif}"
@@ -122,14 +131,21 @@ data "aws_iam_policy_document" "this" {
       variable = "token.actions.githubusercontent.com:sub"
     }
 
-  precondition {
-    condition     = var.oidc_provider_arn != null || var.create_oidc_provider
-    error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided."
-  }
-
     principals {
       identifiers = [local.oidc_provider_arn]
       type        = "Federated"
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = local.validate_oidc_provider
+      error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided"
+    }
+
+    precondition {
+      condition     = local.validate_oidc_role
+      error_message = "When create_oidc_role is false, oidc_role_arn must be provided"
     }
   }
 }
