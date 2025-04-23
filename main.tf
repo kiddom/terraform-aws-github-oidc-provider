@@ -63,15 +63,6 @@ resource "aws_iam_role" "this" {
   path                 = var.iam_role_path
   permissions_boundary = var.iam_role_permissions_boundary
   depends_on           = [aws_iam_openid_connect_provider.this]
-
-  precondition {
-    condition = (
-      var.max_session_duration >= 3600 &&
-      var.max_session_duration <= 43200 &&
-      (var.oidc_role_arn != null || var.create_oidc_role)
-    )
-    error_message = "Maximum session duration must be between 3600 and 43200 seconds."
-  }
 }
 
 # Update assume role policy for existing roles
@@ -126,8 +117,16 @@ data "aws_iam_policy_document" "this" {
   }
 }
 
-# Add validation checks at the root level
-check "provider_validation" {
+check "github_oidc_provider_validation" {
+  assert {
+    condition = (
+      var.max_session_duration >= 3600 &&
+      var.max_session_duration <= 43200 &&
+      (var.oidc_role_arn != null || var.create_oidc_role)
+    )
+    error_message = "Maximum session duration must be between 3600 and 43200 seconds."
+  }
+
   assert {
     condition     = local.validate_oidc_provider
     error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided"
