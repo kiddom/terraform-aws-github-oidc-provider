@@ -8,11 +8,6 @@ variable "oidc_provider_arn" {
   description = "ARN of the OIDC provider to use. Required if 'create_oidc_provider' is false"
   type        = string
   default     = null
-
-  postcondition {
-    condition     = var.oidc_provider_arn != null || var.create_oidc_provider
-    error_message = "When create_oidc_provider is false, oidc_provider_arn must be provided."
-  }
 }
 
 variable "create_oidc_role" {
@@ -25,11 +20,6 @@ variable "oidc_role_arn" {
   description = "ARN of the OIDC role to use. Required if 'create_oidc_role' is false"
   type        = string
   default     = null
-
-  postcondition {
-    condition     = var.oidc_role_arn != null || var.create_oidc_role
-    error_message = "When create_oidc_role is false, oidc_role_arn must be provided."
-  }
 }
 
 variable "attach_policies_to_existing_role" {
@@ -91,11 +81,6 @@ variable "max_session_duration" {
   description = "Maximum session duration in seconds."
   type        = number
   default     = 3600
-
-  postcondition {
-    condition     = var.max_session_duration >= 3600 && var.max_session_duration <= 43200
-    error_message = "Maximum session duration must be between 3600 and 43200 seconds."
-  }
 }
 
 variable "oidc_role_attach_policies" {
