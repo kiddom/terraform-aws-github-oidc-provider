@@ -61,24 +61,19 @@ resource "aws_iam_role" "this" {
   depends_on           = [aws_iam_openid_connect_provider.this]
 }
 
-# Update assume role policy for existing roles
-resource "aws_iam_role" "update_assume_role_policy" {
+# Data source for existing role
+data "aws_iam_role" "existing" {
   count = local.update_role_policy ? 1 : 0
+  name  = local.existing_role_name
+}
 
-  name               = local.role_name
-  assume_role_policy = data.aws_iam_policy_document.this.json
+# Update assume role policy for existing roles using inline policy
+resource "aws_iam_role_policy" "assume_role_policy" {
+  count = local.update_role_policy ? 1 : 0
+  name  = "github-oidc-trust-policy"
+  role  = data.aws_iam_role.existing[0].name
 
-  # Preserve existing role settings
-  lifecycle {
-    ignore_changes = [
-      description,
-      max_session_duration,
-      permissions_boundary,
-      tags,
-      path,
-      force_detach_policies
-    ]
-  }
+  policy = data.aws_iam_policy_document.this.json
 }
 
 resource "aws_iam_role_policy_attachment" "attach" {
@@ -108,6 +103,12 @@ data "aws_iam_policy_document" "this" {
     principals {
       identifiers = [local.oidc_provider_arn]
       type        = "Federated"
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
     }
   }
 }
