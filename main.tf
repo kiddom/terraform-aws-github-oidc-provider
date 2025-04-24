@@ -61,28 +61,51 @@ resource "aws_iam_role" "this" {
   depends_on           = [aws_iam_openid_connect_provider.this]
 }
 
-# Data source for existing role
+# Data source for existing role - used for validation and name resolution
 data "aws_iam_role" "existing" {
-  count = local.update_role_policy ? 1 : 0
-  name  = local.existing_role_name
+  count = (!var.create_oidc_role && (var.update_existing_role_policy || var.attach_policies_to_existing_role)) ? 1 : 0
+  name  = var.role_name
+
+  # Add lifecycle to prevent terraform from failing if role doesn't exist during refresh
+  lifecycle {
+    postcondition {
+      condition     = self.arn != null
+      error_message = "The specified role ${var.role_name} does not exist"
+    }
+  }
 }
 
-# Update assume role policy for existing roles using inline policy
-resource "aws_iam_role_policy" "assume_role_policy" {
+# Update assume role policy for existing roles
+resource "aws_iam_role" "update_assume_role_policy" {
   count = local.update_role_policy ? 1 : 0
-  name  = "github-oidc-trust-policy"
-  role  = data.aws_iam_role.existing[0].name
 
-  policy = data.aws_iam_policy_document.this.json
+  # Use the validated role name from the data source
+  name               = data.aws_iam_role.existing[0].name
+  assume_role_policy = data.aws_iam_policy_document.this.json
+
+  # Preserve existing role settings
+  lifecycle {
+    ignore_changes = [
+      description,
+      max_session_duration,
+      permissions_boundary,
+      tags,
+      path,
+      force_detach_policies
+    ]
+  }
+
+  depends_on = [data.aws_iam_role.existing]
 }
 
 resource "aws_iam_role_policy_attachment" "attach" {
   count = local.attach_policies ? length(var.oidc_role_attach_policies) : 0
 
   policy_arn = var.oidc_role_attach_policies[count.index]
-  role       = local.role_name
+  # Use the validated role name from the data source when attaching to existing role
+  role = var.create_oidc_role ? aws_iam_role.this[0].name : data.aws_iam_role.existing[0].name
 
-  depends_on = [aws_iam_role.this]
+  depends_on = [aws_iam_role.this, data.aws_iam_role.existing]
 }
 
 # Create the policy document for all cases (new roles and for updating existing roles)
