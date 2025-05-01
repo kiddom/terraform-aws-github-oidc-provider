@@ -89,7 +89,6 @@ resource "aws_iam_role" "existing_role_policy" {
       tags,
       path,
       force_detach_policies,
-      managed_policy_arns,
       inline_policy
     ]
   }
