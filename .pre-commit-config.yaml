@@ -20,7 +20,7 @@ repos:
     # Only look for actual AWS credential patterns
     files: \.(js|json|yml|yaml|properties|xml|conf|ini|txt)$
 - repo: https://github.com/antonbabenko/pre-commit-terraform
-  rev: v1.99.0
+  rev: v1.99.3
   hooks:
   - id: terraform_fmt
   - id: terraform_docs
