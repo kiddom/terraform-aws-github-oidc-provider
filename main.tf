@@ -31,6 +31,11 @@ locals {
 
   # For role name, use either the created role or the extracted name from ARN
   role_name = var.create_oidc_role ? aws_iam_role.this["role"].name : local.existing_role_name
+
+  repository_subjects = [
+    for repo in var.repositories :
+    "repo:%{if length(regexall(":+", repo)) > 0}${repo}%{else}${repo}:*%{endif}"
+  ]
 }
 
 resource "aws_iam_openid_connect_provider" "this" {
@@ -91,11 +96,8 @@ data "aws_iam_policy_document" "this" {
     effect  = "Allow"
 
     condition {
-      test = "StringLike"
-      values = [
-        for repo in var.repositories :
-        "repo:%{if length(regexall(":+", repo)) > 0}${repo}%{else}${repo}:*%{endif}"
-      ]
+      test     = "StringLike"
+      values   = local.repository_subjects
       variable = "token.actions.githubusercontent.com:sub"
     }
 
