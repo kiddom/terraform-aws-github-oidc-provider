@@ -13,6 +13,7 @@ We recommend using GitHub's OIDC provider to get short-lived credentials needed 
 3. IAM roles can be scoped to :
      * One or more GitHub organisations
      * One or more GitHub repository
+     * A repository's immutable `organisation@id/repository@id` OIDC subject prefix
      * One or more branches in a repository
 4. Use existing OIDC provider and roles with Terraform
      * Reference an existing OIDC provider by ARN
@@ -73,6 +74,25 @@ module "github-oidc" {
   oidc_role_attach_policies = ["arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"]
 }
 ```
+
+### Using an immutable repository subject prefix
+
+Some repositories issue OIDC subjects with GitHub's numeric organization and
+repository IDs embedded in the repository prefix. Use the prefix returned by
+GitHub's Actions OIDC customization API so the trust policy matches the token
+exactly:
+
+```hcl
+module "github-oidc" {
+  source  = "terraform-module/github-oidc-provider/aws"
+  version = "~> 1"
+
+  repositories = ["my-org@123456/my-repo@789012"]
+}
+```
+
+This produces the `StringLike` subject
+`repo:my-org@123456/my-repo@789012:*`.
 
 ### Using a custom role path and permissions boundary
 
@@ -198,7 +218,7 @@ No modules.
 | <a name="input_oidc_provider_arn"></a> [oidc\_provider\_arn](#input\_oidc\_provider\_arn) | ARN of the OIDC provider to use. Required if 'create\_oidc\_provider' is false | `string` | `null` | no |
 | <a name="input_oidc_role_arn"></a> [oidc\_role\_arn](#input\_oidc\_role\_arn) | ARN of the OIDC role to use. Required if 'create\_oidc\_role' is false | `string` | `null` | no |
 | <a name="input_oidc_role_attach_policies"></a> [oidc\_role\_attach\_policies](#input\_oidc\_role\_attach\_policies) | Attach policies to OIDC role. | `list(string)` | `[]` | no |
-| <a name="input_repositories"></a> [repositories](#input\_repositories) | List of GitHub organization/repository names authorized to assume the role. | `list(string)` | `[]` | no |
+| <a name="input_repositories"></a> [repositories](#input\_repositories) | List of GitHub organization/repository subject prefixes authorized to assume the role. Supports org/repo and immutable org@id/repo@id forms. | `list(string)` | `[]` | no |
 | <a name="input_role_description"></a> [role\_description](#input\_role\_description) | (Optional) Description of the role. | `string` | `"Role assumed by the GitHub OIDC provider."` | no |
 | <a name="input_role_name"></a> [role\_name](#input\_role\_name) | (Optional, Forces new resource) Friendly name of the role. | `string` | `"github-oidc-provider-aws"` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A mapping of tags to assign to all resources | `map(string)` | `{}` | no |

@@ -62,18 +62,19 @@ variable "github_thumbprint" {
 }
 
 variable "repositories" {
-  description = "List of GitHub organization/repository names authorized to assume the role."
+  description = "List of GitHub organization/repository subject prefixes authorized to assume the role. Supports org/repo and immutable org@id/repo@id forms."
   type        = list(string)
   default     = []
 
   validation {
-    # Ensures each element of github_repositories list matches the
-    # organization/repository format used by GitHub.
+    # Accept the standard organization/repository form and GitHub's immutable
+    # organization@id/repository@id subject prefix. An optional suffix scopes
+    # an immutable subject to a ref, pull request, or environment.
     condition = length([
       for repo in var.repositories : 1
-      if length(regexall("^[A-Za-z0-9_.-]+?/([A-Za-z0-9_.:/-]+|\\*)$", repo)) > 0
+      if length(regexall("^([A-Za-z0-9_.-]+?/([A-Za-z0-9_.:/-]+|\\*)|[A-Za-z0-9_.-]+@[0-9]+/[A-Za-z0-9_.-]+@[0-9]+(:[A-Za-z0-9_.:/-]+)?)$", repo)) > 0
     ]) == length(var.repositories)
-    error_message = "Repositories must be specified in the organization/repository format."
+    error_message = "Repositories must use org/repo or immutable org@id/repo@id GitHub subject-prefix format."
   }
 }
 
